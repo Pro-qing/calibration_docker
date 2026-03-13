@@ -1,0 +1,13 @@
+<library path="lib/librqt_vehicle_calib_cpp">
+  <class name="VehicleCalibCpp" type="rqt_vehicle_calib_cpp::VehicleCalib" base_class_type="rqt_gui_cpp::Plugin">
+    <description>C++ Plugin for Vehicle Footprint Calibration</description>
+    <qtgui>
+      <group>
+        <label>Visualization Tools</label>
+      </group>
+      <label>Vehicle Calibrator (C++)</label>
+      <icon type="theme">applications-engineering</icon>
+      <statustip>Calibrate vehicle footprint points</statustip>
+    </qtgui>
+  </class>
+</library>

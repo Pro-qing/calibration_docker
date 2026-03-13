@@ -1,0 +1,15 @@
+<library path="lib/liblidar_transform_rqt">
+  <class name="lidar_transform_rqt/LidarTransform" type="lidar_transform_rqt::LidarTransform" base_class_type="rqt_gui_cpp::Plugin">
+    <description>
+      A plugin to transform pointcloud data in ROS 1.
+    </description>
+    <qtgui>
+      <group>
+        <label>Visualization</label>
+      </group>
+      <label>Lidar Transformer (Noetic)</label>
+      <icon type="theme">system-search</icon>
+      <statustip>Transforms /points_mid</statustip>
+    </qtgui>
+  </class>
+</library>

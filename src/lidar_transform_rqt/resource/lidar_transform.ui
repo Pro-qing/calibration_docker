@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>LidarTransformWidget</class>
+ <widget class="QWidget" name="LidarTransformWidget">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>350</width>
+    <height>450</height>
+   </rect>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <!-- 配置区域 -->
+   <item>
+    <widget class="QGroupBox" name="gb_config">
+     <property name="title">
+      <string>Configuration</string>
+     </property>
+     <layout class="QFormLayout" name="formLayout_2">
+      <item row="0" column="0">
+       <widget class="QLabel" name="label_in"><property name="text"><string>Input Topic:</string></property></widget>
+      </item>
+      <item row="0" column="1">
+       <layout class="QHBoxLayout" name="horizontalLayout">
+        <item>
+         <widget class="QComboBox" name="cb_input_topic">
+          <property name="editable"><bool>true</bool></property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="btn_refresh">
+          <property name="text"><string>R</string></property>
+          <property name="toolTip"><string>Refresh Topic List</string></property>
+          <property name="maximumSize"><size><width>30</width><height>16777215</height></size></property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item row="1" column="0">
+       <widget class="QLabel" name="label_out"><property name="text"><string>Output Topic:</string></property></widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QLineEdit" name="le_output_topic">
+        <property name="text"><string>/points_mid_rqt_cpp</string></property>
+       </widget>
+      </item>
+      <item row="2" column="0">
+       <widget class="QLabel" name="label_frame"><property name="text"><string>Frame ID:</string></property></widget>
+      </item>
+      <item row="2" column="1">
+       <widget class="QLineEdit" name="le_frame_id">
+        <property name="placeholderText"><string>Leave empty to keep original</string></property>
+       </widget>
+      </item>
+      <item row="3" column="1">
+       <widget class="QPushButton" name="btn_apply">
+        <property name="text"><string>Apply Settings</string></property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+
+   <!-- 变换控制区域 (保持原样) -->
+   <item>
+    <widget class="QGroupBox" name="gb_transform">
+     <property name="title">
+      <string>Transform (XYZ / RPY)</string>
+     </property>
+     <layout class="QFormLayout" name="formLayout">
+      <item row="0" column="0">
+       <widget class="QLabel" name="label_x"><property name="text"><string>X (m):</string></property></widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QDoubleSpinBox" name="sb_x"><property name="minimum"><double>-100.0</double></property></widget>
+      </item>
+      <item row="1" column="0">
+       <widget class="QLabel" name="label_y"><property name="text"><string>Y (m):</string></property></widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QDoubleSpinBox" name="sb_y"><property name="minimum"><double>-100.0</double></property></widget>
+      </item>
+      <item row="2" column="0">
+       <widget class="QLabel" name="label_z"><property name="text"><string>Z (m):</string></property></widget>
+      </item>
+      <item row="2" column="1">
+       <widget class="QDoubleSpinBox" name="sb_z"><property name="minimum"><double>-100.0</double></property></widget>
+      </item>
+      <item row="3" column="0">
+       <widget class="QLabel" name="label_r"><property name="text"><string>Roll (rad):</string></property></widget>
+      </item>
+      <item row="3" column="1">
+       <widget class="QDoubleSpinBox" name="sb_roll"><property name="minimum"><double>-6.28</double></property><property name="singleStep"><double>0.1</double></property></widget>
+      </item>
+      <item row="4" column="0">
+       <widget class="QLabel" name="label_p"><property name="text"><string>Pitch (rad):</string></property></widget>
+      </item>
+      <item row="4" column="1">
+       <widget class="QDoubleSpinBox" name="sb_pitch"><property name="minimum"><double>-6.28</double></property><property name="singleStep"><double>0.1</double></property></widget>
+      </item>
+      <item row="5" column="0">
+       <widget class="QLabel" name="label_yaw"><property name="text"><string>Yaw (rad):</string></property></widget>
+      </item>
+      <item row="5" column="1">
+       <widget class="QDoubleSpinBox" name="sb_yaw"><property name="minimum"><double>-6.28</double></property><property name="singleStep"><double>0.1</double></property></widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <spacer name="verticalSpacer">
+     <property name="orientation"><enum>Qt::Vertical</enum></property>
+     <property name="sizeHint" stdset="0"><size><width>20</width><height>40</height></size></property>
+    </spacer>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
