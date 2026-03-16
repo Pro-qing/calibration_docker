@@ -1,4 +1,4 @@
-#include "self_calibration_v3/self_calibration_v3.hpp"
+#include "self_calibration_mid/self_calibration_mid.hpp"
 #include <ros/ros.h>
 
 int main(int argc, char** argv)

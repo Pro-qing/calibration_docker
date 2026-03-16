@@ -1,5 +1,5 @@
-#ifndef SELF_CALIBRATION_V3_HPP
-#define SELF_CALIBRATION_V3_HPP
+#ifndef SELF_CALIBRATION_MID_HPP
+#define SELF_CALIBRATION_MID_HPP
 
 #include <ros/ros.h>
 #include <sensor_msgs/PointCloud2.h>

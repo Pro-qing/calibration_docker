@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0.2)
-project(self_calibration_v3)
+project(self_calibration_mid)
 
 # set(PCL_DIR "/usr/lib/x86_64-linux-gnu/cmake/pcl")
 find_package(catkin REQUIRED COMPONENTS
@@ -33,13 +33,13 @@ include_directories(
 )
 
 
-add_executable(self_calibration_v3 src/lidar_self_calibration_v3.cpp src/main.cpp)
+add_executable(self_calibration_mid src/lidar_self_calibration_mid.cpp src/main.cpp)
 
 
 
-add_dependencies(self_calibration_v3 ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(self_calibration_mid ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
-target_link_libraries(self_calibration_v3
+target_link_libraries(self_calibration_mid
   ${catkin_LIBRARIES}
   ${PCL_LIBRARIES}
 )
@@ -63,8 +63,9 @@ install(DIRECTORY
 )
 
 install(TARGETS 
-  self_calibration_v3
+  self_calibration_mid
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
+

@@ -6,6 +6,7 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 xhost +local:docker > /dev/null
 
 # 彻底清理旧容器
+docker stop calibration_Dev 2>/dev/null && echo "停止旧容器"
 docker rm -f calibration_dev 2>/dev/null
 
 docker run -it \

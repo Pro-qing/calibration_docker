@@ -1,4 +1,4 @@
-#include "self_calibration_v3/self_calibration_v3.hpp"
+#include "self_calibration_mid/self_calibration_mid.hpp"
 #include <pcl/filters/passthrough.h>
 #include <pcl/segmentation/sac_segmentation.h>
 #include <pcl/filters/extract_indices.h>
@@ -20,7 +20,7 @@ LidarCalibration::LidarCalibration(ros::NodeHandle& nh) : nh_(nh)
     nh_.param<std::string>("mid_frame", mid_frame_, "mid_lidar");
     
     // [新增] 读取 YAML 文件保存路径
-    nh_.param<std::string>("save_path", save_path_, "~/laser_self_calibration_workspace/src/self_calibration_v3/param/lidar_calibration.yaml");
+    nh_.param<std::string>("save_path", save_path_, "$(env HOME)/src/self_calibration_mid/param/lidar_calibration.yaml");
 
     nh_.param<float>("actual_left_distance", actual_left_dist_, 0.0f);   
     nh_.param<float>("actual_right_distance", actual_right_dist_, 0.0f);

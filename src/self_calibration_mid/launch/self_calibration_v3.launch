@@ -1,6 +1,6 @@
 <launch>
-    <node pkg="self_calibration_v3" type="self_calibration_v3" 
-          name="self_calibration_v3" output="screen">
+    <node pkg="self_calibration_mid" type="self_calibration_mid" 
+          name="self_calibration_mid" output="screen">
         
         <!-- 坐标系设置 -->
         <param name="lidar_frame" type="string" value="velodyne" />
@@ -26,6 +26,6 @@
         <!-- 注意：现在订阅的是 /points_16，16线的激光雷达数据 -->
 
         <!-- 保存路径 -->
-        <param name="save_path" value="/home/getq/laser_self_calibration_workspace/src/self_calibration_v3/param/lidar_calibration.yaml" />
+        <param name="save_path" value="$(env HOME)}/src/self_calibration_mid/param/lidar_calibration.yaml" />
     </node>
 </launch>

@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>self_calibration_v3</name>
+  <name>self_calibration_mid</name>
   <version>0.0.0</version>
   <description>The ctrlo_floor package</description>
 
