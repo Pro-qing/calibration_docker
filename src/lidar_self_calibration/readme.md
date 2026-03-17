@@ -60,7 +60,7 @@ git clone [https://github.com/Pro-qing/lidar_self_calibration.git](https://githu
 ## ⚙️ 配置说明
 
 在运行前，请在 launch/lidar_self_calibration.launch 中根据实际环境测量并填写以下关键参数：
-```bash
+
 | 参数名 | 类型 | 单位 | 说明 |
 | :--- | :--- | :--- | :--- |
 | **wheel_track** | double | m | 后轮轮距 |
@@ -73,7 +73,7 @@ git clone [https://github.com/Pro-qing/lidar_self_calibration.git](https://githu
 | **guess_lidar_yaw_deg** | double | deg | 安装航向角粗略估计 |
 | **manual_lidar_height** | double | m | 雷达离地高度 |
 | **save_path** | string | - | YAML 结果文件的绝对路径 |
-```
+
 ## 🏁 运行指南
 
 启动标定节点：
