@@ -11,11 +11,12 @@
 #include <tf2_ros/transform_broadcaster.h>
 #include <geometry_msgs/TransformStamped.h>
 #include <nav_msgs/Odometry.h>
-#include <yaml-cpp/yaml.h> // 新增
-#include <fstream>         // 新增
+#include <yaml-cpp/yaml.h> 
+#include <fstream>         
 #include <vector>
 #include <string>
 #include <deque>
+#include <algorithm> 
 
 struct LaserLine {
     float avg_distance;
@@ -54,8 +55,17 @@ private:
     ros::Publisher filtered_pub_, wall_points_pub_, calibrated_pub_, status_pub_;
     tf2_ros::TransformBroadcaster tf_broadcaster_;
 
-    std::string lidar_frame_, base_frame_, save_path_; // 新增 save_path_
-    float actual_left_dist_, actual_right_dist_, actual_front_dist_, manual_lidar_height_;
+    std_msgs::Header current_header_;
+
+    std::string lidar_frame_, base_frame_, save_path_; 
+    
+    // 内部推导出的真值参数
+    float actual_left_dist_, actual_right_dist_, actual_front_dist_;
+    float manual_lidar_height_;
+    float parking_yaw_rad_;
+    
+    // 雷达粗略偏置
+    float guess_lidar_x_, guess_lidar_y_, guess_lidar_yaw_deg_;
     
     Eigen::Matrix4f transform_matrix_;
     bool calibration_done_;
@@ -71,7 +81,7 @@ private:
     void calculateCalibrationStep();
     void accumulateAndSmooth();
     void computeRobustAverage();
-    void saveResultsToYaml(); // 新增保存函数
+    void saveResultsToYaml(); 
     
     void publishTF();
     void publishStatus();

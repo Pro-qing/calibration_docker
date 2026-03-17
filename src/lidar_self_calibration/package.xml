@@ -11,15 +11,19 @@
   <build_depend>pcl_ros</build_depend>
   <build_depend>roscpp</build_depend>
   <build_depend>sensor_msgs</build_depend>
+  <build_depend>geometry_msgs</build_depend>
   <build_depend>nav_msgs</build_depend>
   <build_depend>tf2_ros</build_depend>
+  <build_depend>tf2</build_depend>
   <build_depend>yaml-cpp</build_depend>
 
   <exec_depend>pcl_conversions</exec_depend>
   <exec_depend>pcl_ros</exec_depend>
   <exec_depend>roscpp</exec_depend>
   <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
   <exec_depend>nav_msgs</exec_depend>
   <exec_depend>tf2_ros</exec_depend>
+  <exec_depend>tf2</exec_depend>
   <exec_depend>yaml-cpp</exec_depend>
 </package>
