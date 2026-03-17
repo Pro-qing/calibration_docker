@@ -1,31 +1,35 @@
 <launch>
-    <node pkg="lidar_self_calibration" type="lidar_self_calibration" 
-          name="lidar_self_calibration" output="screen">
-        
-        <!-- 坐标系设置 -->
-        <!-- 注意：现在订阅的是 /points_16，16线的激光雷达数据 -->
-        <param name="lidar_frame" type="string" value="velodyne" />
-        <param name="base_frame" type="string" value="base_link" />
-        
-        <!-- 测试变换参数 -->
-        <param name="enable_test_transform" type="bool" value="false" />
-        <param name="test_translate_x" type="double" value="0.0" />
-        <param name="test_translate_y" type="double" value="0.0" />
-        <param name="test_translate_z" type="double" value="0.0" />
-        <param name="test_rotate_yaw" type="double" value="0.0" />
-        <param name="test_rotate_pitch" type="double" value="0.0" />
-        <param name="test_rotate_roll" type="double" value="0.0" />
+    <!-- 标定结果保存路径准备 (可选：确保存放目录存在) -->
+    <param name="config_dir" value="$(find lidar_self_calibration)/config" />
 
-        <!-- 车间墙面的实际距离（必须根据实际车间测量设置） -->
-        <param name="actual_left_distance" type="double" value="1.638" />
-        <param name="actual_right_distance" type="double" value="1.558" />
-        <param name="actual_front_distance" type="double" value="2.22" />
-                
-        <!-- 手动测量的雷达高度（必须根据实际车间测量设置）-->
-        <param name="manual_lidar_height" type="double" value="0.0" />
+    <node pkg="lidar_self_calibration" type="lidar_self_calibration_node" name="lidar_calibration" output="screen">
+        <!-- 坐标系与路径配置 -->
+        <param name="lidar_frame" value="velodyne" />
+        <param name="base_frame"  value="base_link" />
+        <param name="save_path"   value="/home/ros_ws/src/lidar_self_calibration/param/lidar_calibration.yaml" />
+
+        <!-- ================== 卷尺实际测量区 ================== -->
+        <!-- 注意：请测量前轮中心(轮毂)垂直于墙面的距离。如果从轮胎边缘测，请加上半个轮胎宽 -->
         
-        <!-- 注意：现在订阅的是 /points_16，16线的激光雷达数据 -->
-        <!-- 保存路径 -->
-        <param name="save_path" value="/home/getq/laser_self_calibration_workspace/src/lidar_self_calibration/param/lidar_calibration.yaml" />
+        <!-- 1. 前向距离测量 -->
+        <param name="dist_left_wheel_to_front"  value="2.50" />
+        <param name="dist_right_wheel_to_front" value="2.55" />
+        
+        <!-- 2. 侧向距离测量 -->
+        <param name="dist_left_wheel_to_left_wall"   value="1.8" />
+        <param name="dist_right_wheel_to_right_wall" value="2.02" />
+        
+        <!-- 3. 车辆固有参数 -->
+        <param name="wheel_track" value="0.68" /> <!-- 左右车轮中心的距离 -->
+
+        <!-- ================== 雷达粗略位置区 ================== -->
+        <!-- 帮助算法锁定目标墙，不需要精准，误差几十厘米也没关系 -->
+        <param name="guess_lidar_x"       value="1.00" />  <!-- 雷达在base_link前多少米 -->
+        <param name="guess_lidar_y"       value="0.00" />  <!-- 雷达在base_link左侧多少米 -->
+        <param name="guess_lidar_yaw_deg" value="0.0" />   <!-- 安装航向角粗略估计 -->
+        <param name="manual_lidar_height" value="1.80" />  <!-- 雷达离地高度 -->
+        
+        <!-- 重新映射你的雷达话题名称 -->
+        <remap from="/points_16" to="/points_16" />
     </node>
 </launch>

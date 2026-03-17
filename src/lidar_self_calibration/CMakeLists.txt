@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.0.2)
 project(lidar_self_calibration)
 
-# set(PCL_DIR "/usr/lib/x86_64-linux-gnu/cmake/pcl")
+# 1. 查找依赖包 (集中放在一起)
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   sensor_msgs
@@ -11,67 +11,53 @@ find_package(catkin REQUIRED COMPONENTS
   pcl_conversions
 )
 find_package(PCL 1.10 REQUIRED)
+find_package(yaml-cpp REQUIRED)
+
 message(STATUS "PCL_VERSION = ${PCL_VERSION}")
 
-include_directories(${PCL_INCLUDE_DIRS})
+# 2. 引入头文件目录
+include_directories(
+  include
+  ${catkin_INCLUDE_DIRS}
+  ${PCL_INCLUDE_DIRS}
+  ${YAML_CPP_INCLUDE_DIR}
+)
 link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})
 
 catkin_package(
-#  INCLUDE_DIRS include
-#  LIBRARIES pallet_tcp
-#  CATKIN_DEPENDS other_catkin_pkg
-#  DEPENDS system_lib
+  INCLUDE_DIRS include
+  CATKIN_DEPENDS roscpp sensor_msgs geometry_msgs tf2 tf2_ros pcl_conversions
 )
 
-###########
-## Build ##
-###########
-include_directories(
-    include
-    ${catkin_INCLUDE_DIRS}
-)
+# 3. 编译节点 (名字统一加 _node 后缀，与 launch 文件完全对应)
+add_executable(${PROJECT_NAME}_node src/lidar_self_calibration.cpp src/main.cpp)
 
-
-add_executable(lidar_self_calibration src/lidar_self_calibration.cpp src/main.cpp)
-
-
-
-add_dependencies(lidar_self_calibration ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-
-target_link_libraries(lidar_self_calibration
+# 4. 链接库
+target_link_libraries(${PROJECT_NAME}_node
   ${catkin_LIBRARIES}
   ${PCL_LIBRARIES}
-)
-
-find_package(yaml-cpp REQUIRED)
-
-# 在 add_executable 之后的 target_link_libraries 中加入：
-target_link_libraries(lidar_self_calibration
-  ${catkin_LIBRARIES}
   yaml-cpp
 )
-
 
 #############
 ## Install ##
 #############
 
-#3 头文件,                   (PATH: install/include/slam_karto/)
+# 安装头文件 (修正为匹配 *.hpp)
 install(DIRECTORY include/
   DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
-  FILES_MATCHING PATTERN "*.h"
+  FILES_MATCHING PATTERN "*.hpp"
   PATTERN ".svn" EXCLUDE
 )
 
-#3 拷贝 launch目录           (PATH: install/share/slam_karto/launch/)
-install(DIRECTORY 
-    launch                   #注意,不能使用 launch/
-    DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
+# 安装 launch 目录
+install(DIRECTORY launch
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
 )
 
-install(TARGETS 
-  lidar_self_calibration
+# 安装可执行文件 (放到 ROS 环境能够识别的 bin 目录下)
+install(TARGETS ${PROJECT_NAME}_node
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
