@@ -62,9 +62,15 @@ git clone [https://github.com/Pro-qing/lidar_self_calibration.git](https://githu
 在运行前，请在 launch/lidar_self_calibration.launch 中根据实际环境测量并填写以下关键参数：
 ```bash
 参数名	类型	说明
-actual_left_distance	double	车体中心到左侧墙面的真实距离 (m)
-actual_right_distance	double	车体中心到右侧墙面的真实距离 (m)
-actual_front_distance	double	车体中心到前方墙面的真实距离 (m)
+wheel_track	double	后轮轮距 (m)
+dist_left_wheel_to_front	double	左轮中心到前方墙面的真实距离 (m)
+dist_right_wheel_to_front	double	右轮中心到前方墙面的真实距离 (m)
+dist_left_wheel_to_left_wall	double	左轮中心到侧方墙面的真实距离 (m)
+dist_right_wheel_to_right_wall	double	右轮中心到侧方墙面的真实距离 (m)
+guess_lidar_x	double	雷达在base_link_x前多少米 (m)
+guess_lidar_y	double	雷达在base_link左侧多少米 (m)
+guess_lidar_yaw_deg	double	安装航向角粗略估计 (deg)
+manual_lidar_height	double	雷达离地高度 (m)
 save_path	string	YAML 结果文件的绝对路径
 ```
 ## 🏁 运行指南
@@ -98,20 +104,4 @@ lidar_calibration:
   child_frame_id: "velodyne"
 
 ## Maintainer: Pro-qing
-
-
-
-开发进度：数学死穴——系统的不可观测性（Observability Problem）
-
-关于车辆无法停放完全平行问题
-
-第一步：在现实中增加一次测量（求出停车偏航角）
-
-测量左前轮中心（或车头左角）到前墙的垂直距离，记为 DL ​。
-
-测量右前轮中心（或车头右角）到前墙的垂直距离，记为 DR​ 。
-
-测量左右两个测量点之间的车身宽度，记为 W 。
-
-θpark ​= arcsin[(DL​−DR​​)/W]
 
