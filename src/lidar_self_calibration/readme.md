@@ -61,17 +61,18 @@ git clone [https://github.com/Pro-qing/lidar_self_calibration.git](https://githu
 
 在运行前，请在 launch/lidar_self_calibration.launch 中根据实际环境测量并填写以下关键参数：
 ```bash
-/参数名	/类型	/说明
-/wheel_track	double	后轮轮距 (m)
-/dist_left_wheel_to_front	double	左轮中心到前方墙面的真实距离 (m)
-/dist_right_wheel_to_front	double	右轮中心到前方墙面的真实距离 (m)
-/dist_left_wheel_to_left_wall	double	左轮中心到侧方墙面的真实距离 (m)
-/dist_right_wheel_to_right_wall	double	右轮中心到侧方墙面的真实距离 (m)
-/guess_lidar_x	double	雷达在base_link_x前多少米 (m)
-/guess_lidar_y	double	雷达在base_link左侧多少米 (m)
-/guess_lidar_yaw_deg	double	安装航向角粗略估计 (deg)
-/manual_lidar_height	double	雷达离地高度 (m)
-/save_path	string	YAML 结果文件的绝对路径
+| 参数名 | 类型 | 单位 | 说明 |
+| :--- | :--- | :--- | :--- |
+| **wheel_track** | double | m | 后轮轮距 |
+| **dist_left_wheel_to_front** | double | m | 左轮中心到前方墙面的真实距离 |
+| **dist_right_wheel_to_front** | double | m | 右轮中心到前方墙面的真实距离 |
+| **dist_left_wheel_to_left_wall** | double | m | 左轮中心到左侧墙面的真实距离 |
+| **dist_right_wheel_to_right_wall** | double | m | 右轮中心到右侧墙面的真实距离 |
+| **guess_lidar_x** | double | m | 雷达在 `base_link_x` 前多少米 |
+| **guess_lidar_y** | double | m | 雷达在 `base_link_y` 左侧多少米 |
+| **guess_lidar_yaw_deg** | double | deg | 安装航向角粗略估计 |
+| **manual_lidar_height** | double | m | 雷达离地高度 |
+| **save_path** | string | - | YAML 结果文件的绝对路径 |
 ```
 ## 🏁 运行指南
 
