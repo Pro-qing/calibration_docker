@@ -4,7 +4,7 @@
 #include <pcl/filters/extract_indices.h>
 #include <pcl/common/common.h>
 #include <pcl/common/centroid.h>
-#include <pcl/common/transforms.h> // 确保包含变换库
+#include <pcl/common/transforms.h>
 #include <clocale>
 #include <cmath>
 #include <iomanip>
@@ -18,38 +18,59 @@ LidarCalibration::LidarCalibration(ros::NodeHandle& nh) : nh_(nh)
     nh_.param<std::string>("lidar_frame", lidar_frame_, "velodyne");
     nh_.param<std::string>("base_frame", base_frame_, "base_link");
     nh_.param<std::string>("mid_frame", mid_frame_, "mid_lidar");
-    
-    // [新增] 读取 YAML 文件保存路径
     nh_.param<std::string>("save_path", save_path_, "$(env HOME)/src/self_calibration_mid/param/lidar_calibration.yaml");
 
-    nh_.param<float>("actual_left_distance", actual_left_dist_, 0.0f);   
-    nh_.param<float>("actual_right_distance", actual_right_dist_, 0.0f);
-    nh_.param<float>("actual_front_distance", actual_front_dist_, 0.0f); 
-    nh_.param<float>("manual_lidar_height", manual_lidar_height_, 1.0f);
+    // 读取新的测量参数
+    nh_.param<float>("dist_left_wheel_to_front", dist_left_wheel_to_front_, 2.50f);
+    nh_.param<float>("dist_right_wheel_to_front", dist_right_wheel_to_front_, 2.55f);
+    nh_.param<float>("dist_left_wheel_to_left_wall", dist_left_wheel_to_left_wall_, 1.8f);
+    nh_.param<float>("dist_right_wheel_to_right_wall", dist_right_wheel_to_right_wall_, 2.02f);
+    nh_.param<float>("wheel_track", wheel_track_, 0.68f);
+    nh_.param<float>("manual_lidar_height", manual_lidar_height_, 1.92f);
 
     cloud_sub_ = nh_.subscribe<sensor_msgs::PointCloud2>("/points_16", 1, &LidarCalibration::pointCloudCallback, this);
     mid_cloud_sub_ = nh_.subscribe<sensor_msgs::PointCloud2>("/points_mid", 1, &LidarCalibration::midPointCloudCallback, this);
-    // mid_cloud_sub_ = nh_.subscribe<sensor_msgs::PointCloud2>("/points_mid", 1, &LidarCalibration::midPointCloudCallback, this);
 
     filtered_pub_ = nh_.advertise<sensor_msgs::PointCloud2>("filtered_points", 1);
     wall_points_pub_ = nh_.advertise<sensor_msgs::PointCloud2>("wall_points", 1);
     
     mid_filtered_pub_ = nh_.advertise<sensor_msgs::PointCloud2>("mid_filtered_points", 1);
     mid_wall_pub_ = nh_.advertise<sensor_msgs::PointCloud2>("mid_wall_points", 1);
-    
-    // [新增] 用于RViz验证的发布器
     transformed_mid_pub_ = nh_.advertise<sensor_msgs::PointCloud2>("/velodyne_points_mid", 1);
     
     T_base_to_velo_.setIdentity(); 
     T_base_to_mid_.setIdentity();  
     velo_ready_ = false;
-    
     calibration_queue_.clear();
     
+    // 初始化计算Base相对于Room的先验位置
+    calculateBaseRoomExtrinsics();
+
     ROS_INFO("================================================");
-    ROS_INFO("   双雷达标定 (可视化验证版)");
+    ROS_INFO("   双雷达标定 (可视化验证版 + 车辆Yaw角补偿)");
+    ROS_INFO("   车辆 Yaw 偏角: %.2f 度", toDegrees(base_yaw_));
     ROS_INFO("   RViz话题: /velodyne_points_mid (Frame: velodyne)");
     ROS_INFO("================================================");
+}
+
+// --------------------------------------------------------------------------------
+// 0. Base_Link -> Room 参数预计算 (核心角度与距离补偿)
+// --------------------------------------------------------------------------------
+void LidarCalibration::calculateBaseRoomExtrinsics()
+{
+    // 1. 计算车辆相对于墙面的 Yaw 偏角
+    // 若左侧离前墙更近 (dl < dr)，说明车头偏向右侧，Yaw角为负。
+    float sin_theta = (dist_left_wheel_to_front_ - dist_right_wheel_to_front_) / wheel_track_;
+    sin_theta = std::max(-1.0f, std::min(1.0f, sin_theta)); // 防止无效浮点运算
+    base_yaw_ = std::asin(sin_theta);
+
+    // 2. 计算Base中心到各墙面的理论垂直距离 (用于构建 Room Frame 坐标系)
+    base_to_front_wall_ = (dist_left_wheel_to_front_ + dist_right_wheel_to_front_) / 2.0f;
+    
+    // 侧墙距离补偿：需考虑车轮由于偏航引起的Y方向偏移分量
+    float y_compensation = (wheel_track_ / 2.0f) * std::cos(base_yaw_);
+    base_to_left_wall_ = dist_left_wheel_to_left_wall_ + y_compensation;
+    base_to_right_wall_ = dist_right_wheel_to_right_wall_ + y_compensation;
 }
 
 // --------------------------------------------------------------------------------
@@ -88,56 +109,73 @@ void LidarCalibration::pointCloudCallback(const sensor_msgs::PointCloud2::ConstP
 
 void LidarCalibration::calculateVeloToBase()
 {
-    Eigen::Vector3f x_axis_base_in_velo = -velo_front_.normal;
-    Eigen::Vector3f y_axis_base_in_velo;
+    // --- 1. 计算雷达原点在虚拟 Room 坐标系中的位置 ---
+    float p_lidar_room_x = base_to_front_wall_ - velo_front_.avg_distance;
+    
+    float y_from_left = base_to_left_wall_ - velo_left_.avg_distance;
+    float y_from_right = -base_to_right_wall_ + velo_right_.avg_distance;
     
     float conf_sum = velo_left_.confidence + velo_right_.confidence;
+    float p_lidar_room_y = 0.0f;
     if (conf_sum > 0) {
-        // Y轴反转修复逻辑保持
-        y_axis_base_in_velo = (-velo_left_.normal * velo_left_.confidence + velo_right_.normal * velo_right_.confidence) / conf_sum;
+        p_lidar_room_y = (y_from_left * velo_left_.confidence + y_from_right * velo_right_.confidence) / conf_sum;
     } else {
-        y_axis_base_in_velo = -velo_left_.normal;
-    }
-
-    y_axis_base_in_velo = (y_axis_base_in_velo - (y_axis_base_in_velo.dot(x_axis_base_in_velo)) * x_axis_base_in_velo).normalized();
-    Eigen::Vector3f z_axis_base_in_velo = x_axis_base_in_velo.cross(y_axis_base_in_velo).normalized();
-
-    Eigen::Matrix3f R_base_in_velo;
-    R_base_in_velo.col(0) = x_axis_base_in_velo;
-    R_base_in_velo.col(1) = y_axis_base_in_velo;
-    R_base_in_velo.col(2) = z_axis_base_in_velo;
-    
-    Eigen::Matrix3f R_velo_in_base = R_base_in_velo.transpose();
-
-    float tx = actual_front_dist_ - velo_front_.avg_distance;
-    
-    float ty_from_left = actual_left_dist_ - velo_left_.avg_distance;
-    float ty_from_right = -actual_right_dist_ + velo_right_.avg_distance; 
-    
-    float ty = 0.0f;
-    if (conf_sum > 0) {
-        ty = (ty_from_left * velo_left_.confidence + ty_from_right * velo_right_.confidence) / conf_sum;
-    } else {
-        ty = ty_from_left;
+        p_lidar_room_y = y_from_left;
     }
     
-    float tz = manual_lidar_height_;
+    float p_lidar_room_z = manual_lidar_height_;
+    Eigen::Vector3f P_lidar_room(p_lidar_room_x, p_lidar_room_y, p_lidar_room_z);
+
+    // --- 2. 计算 Room 坐标系在 Velodyne 坐标系中的姿态 ---
+    // 前墙法向量反向即为 Room 的 X 轴
+    Eigen::Vector3f x_room_in_velo = -velo_front_.normal;
+    Eigen::Vector3f y_room_in_velo;
+    
+    if (conf_sum > 0) {
+        y_room_in_velo = (-velo_left_.normal * velo_left_.confidence + velo_right_.normal * velo_right_.confidence) / conf_sum;
+    } else {
+        y_room_in_velo = -velo_left_.normal;
+    }
+
+    // 正交化处理
+    y_room_in_velo = (y_room_in_velo - (y_room_in_velo.dot(x_room_in_velo)) * x_room_in_velo).normalized();
+    Eigen::Vector3f z_room_in_velo = x_room_in_velo.cross(y_room_in_velo).normalized();
+
+    Eigen::Matrix3f R_room_in_velo;
+    R_room_in_velo.col(0) = x_room_in_velo;
+    R_room_in_velo.col(1) = y_room_in_velo;
+    R_room_in_velo.col(2) = z_room_in_velo;
+    
+    // Velodyne 相对于 Room 的旋转
+    Eigen::Matrix3f R_velo_in_room = R_room_in_velo.transpose();
+
+    // -----------------------------------------------------------
+    // 关键修正：加入车辆 Yaw 角补偿
+    // 构建 Base 在 Room 中的旋转矩阵 (只绕 Z 轴旋转 base_yaw_)
+    // -----------------------------------------------------------
+    Eigen::Matrix3f R_base_in_room;
+    R_base_in_room = Eigen::AngleAxisf(base_yaw_, Eigen::Vector3f::UnitZ()).toRotationMatrix();
+
+    // 最终计算 Velodyne 相对于 Base 的旋转矩阵和平移向量
+    // R_velo_in_base = R_room_in_base * R_velo_in_room
+    Eigen::Matrix3f R_velo_in_base = R_base_in_room.transpose() * R_velo_in_room;
+
+    // t_velo_in_base = R_room_in_base * P_lidar_room (因为Base原点就是Room原点)
+    Eigen::Vector3f t_velo_in_base = R_base_in_room.transpose() * P_lidar_room;
 
     T_base_to_velo_.setIdentity();
     T_base_to_velo_.block<3,3>(0,0) = R_velo_in_base;
-    T_base_to_velo_(0,3) = tx;
-    T_base_to_velo_(1,3) = ty;
-    T_base_to_velo_(2,3) = tz;
+    T_base_to_velo_.block<3,1>(0,3) = t_velo_in_base;
 }
 
 // --------------------------------------------------------------------------------
-// 2. Mid -> Base_Link 计算
+// 2. Mid -> Base_Link 计算 (同样加入 Yaw 补偿)
 // --------------------------------------------------------------------------------
 void LidarCalibration::midPointCloudCallback(const sensor_msgs::PointCloud2::ConstPtr& msg)
 {
     if (!velo_ready_) return;
 
-    // [关键] 保留一份原始点云用于变换发布
+    // 保留一份原始点云用于变换发布
     pcl::PointCloud<pcl::PointXYZ>::Ptr raw_cloud(new pcl::PointCloud<pcl::PointXYZ>);
     pcl::fromROSMsg(*msg, *raw_cloud);
     
@@ -195,18 +233,12 @@ void LidarCalibration::midPointCloudCallback(const sensor_msgs::PointCloud2::Con
         
         printFinalResult(T_final);
 
-        // ========================================================
-        // [新增] 当平滑窗口满了之后，将结果实时覆盖写入 YAML 文件
-        // ========================================================
+        // 写入 YAML 文件
         if (calibration_queue_.size() >= SMOOTH_WINDOW_SIZE) {
             saveToYAML(T_final, save_path_);
         }
 
-        
-        // ========================================================
-        // [新增] 发布转换后的点云到 /velodyne_points_mid
-        // ========================================================
-        // 使用 raw_cloud (包含地面) 进行变换，方便在 RViz 中观察地面是否对齐
+        // 发布转换后的点云到 RViz
         publishTransformedMidCloud(raw_cloud, T_final);
 
         // 可视化提取的平面
@@ -228,6 +260,51 @@ void LidarCalibration::midPointCloudCallback(const sensor_msgs::PointCloud2::Con
     }
 }
 
+void LidarCalibration::calculateMidToBase()
+{
+    // --- 1. 计算 Mid 雷达在虚拟 Room 坐标系中的位置 ---
+    float p_mid_room_x = base_to_front_wall_ - mid_front_.avg_distance;
+    
+    float y_from_left = base_to_left_wall_ - mid_left_.avg_distance;
+    float y_from_right = mid_right_.avg_distance - base_to_right_wall_;
+    
+    float total_conf = mid_left_.confidence + mid_right_.confidence;
+    float p_mid_room_y = 0.0f;
+    if (total_conf > 0) {
+        p_mid_room_y = (y_from_left * mid_left_.confidence + y_from_right * mid_right_.confidence) / total_conf;
+    } else {
+        p_mid_room_y = y_from_left; 
+    }
+    
+    float p_mid_room_z = mid_ground_.avg_distance;
+    Eigen::Vector3f P_mid_room(p_mid_room_x, p_mid_room_y, p_mid_room_z);
+
+    // --- 2. 计算 Room 坐标系在 Mid 雷达坐标系中的姿态 ---
+    Eigen::Vector3f z_room_in_mid = mid_ground_.normal;
+    Eigen::Vector3f x_room_in_mid = -mid_front_.normal;
+    
+    x_room_in_mid = (x_room_in_mid - (x_room_in_mid.dot(z_room_in_mid)) * z_room_in_mid).normalized();
+    Eigen::Vector3f y_room_in_mid = z_room_in_mid.cross(x_room_in_mid).normalized();
+    
+    Eigen::Matrix3f R_room_in_mid;
+    R_room_in_mid.col(0) = x_room_in_mid;
+    R_room_in_mid.col(1) = y_room_in_mid;
+    R_room_in_mid.col(2) = z_room_in_mid;
+    
+    Eigen::Matrix3f R_mid_in_room = R_room_in_mid.transpose();
+    
+    // --- 3. 施加 Yaw 角度补偿推导 Base 到 Mid ---
+    Eigen::Matrix3f R_base_in_room;
+    R_base_in_room = Eigen::AngleAxisf(base_yaw_, Eigen::Vector3f::UnitZ()).toRotationMatrix();
+
+    Eigen::Matrix3f R_mid_in_base = R_base_in_room.transpose() * R_mid_in_room;
+    Eigen::Vector3f t_mid_in_base = R_base_in_room.transpose() * P_mid_room;
+
+    T_base_to_mid_.setIdentity();
+    T_base_to_mid_.block<3,3>(0,0) = R_mid_in_base;
+    T_base_to_mid_.block<3,1>(0,3) = t_mid_in_base;
+}
+
 // 点云变换发布函数
 void LidarCalibration::publishTransformedMidCloud(const pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, 
                                                  const Eigen::Matrix4f& T_mid_to_velo)
@@ -235,15 +312,10 @@ void LidarCalibration::publishTransformedMidCloud(const pcl::PointCloud<pcl::Poi
     if (cloud->empty()) return;
 
     pcl::PointCloud<pcl::PointXYZ>::Ptr transformed_cloud(new pcl::PointCloud<pcl::PointXYZ>);
-    
-    // 执行刚体变换: P_velo = T * P_mid
     pcl::transformPointCloud(*cloud, *transformed_cloud, T_mid_to_velo);
     
     sensor_msgs::PointCloud2 output_msg;
     pcl::toROSMsg(*transformed_cloud, output_msg);
-    
-    // 将 Frame ID 修改为目标坐标系 (velodyne)
-    // 这样在 RViz 中 Fixed Frame 选 velodyne 时，两份点云才能正确叠加
     output_msg.header.frame_id = lidar_frame_; 
     output_msg.header.stamp = ros::Time::now();
     
@@ -276,43 +348,6 @@ Eigen::Matrix4f LidarCalibration::getSmoothedResult()
     T_smooth.block<3,1>(0,3) = sum_t;
 
     return T_smooth;
-}
-
-void LidarCalibration::calculateMidToBase()
-{
-    Eigen::Vector3f z_axis_base_in_mid = mid_ground_.normal;
-    Eigen::Vector3f x_axis_base_in_mid = -mid_front_.normal;
-    
-    x_axis_base_in_mid = (x_axis_base_in_mid - (x_axis_base_in_mid.dot(z_axis_base_in_mid)) * z_axis_base_in_mid).normalized();
-    Eigen::Vector3f y_axis_base_in_mid = z_axis_base_in_mid.cross(x_axis_base_in_mid).normalized();
-    
-    Eigen::Matrix3f R_base_in_mid;
-    R_base_in_mid.col(0) = x_axis_base_in_mid;
-    R_base_in_mid.col(1) = y_axis_base_in_mid;
-    R_base_in_mid.col(2) = z_axis_base_in_mid;
-    
-    Eigen::Matrix3f R_mid_in_base = R_base_in_mid.transpose();
-    
-    float tx = actual_front_dist_ - mid_front_.avg_distance;
-    
-    float ty_from_left = actual_left_dist_ - mid_left_.avg_distance;
-    float ty_from_right = mid_right_.avg_distance - actual_right_dist_;
-    
-    float total_conf = mid_left_.confidence + mid_right_.confidence;
-    float ty = 0.0f;
-    if (total_conf > 0) {
-        ty = (ty_from_left * mid_left_.confidence + ty_from_right * mid_right_.confidence) / total_conf;
-    } else {
-        ty = ty_from_left; 
-    }
-    
-    float tz = mid_ground_.avg_distance;
-
-    T_base_to_mid_.setIdentity();
-    T_base_to_mid_.block<3,3>(0,0) = R_mid_in_base;
-    T_base_to_mid_(0,3) = tx;
-    T_base_to_mid_(1,3) = ty;
-    T_base_to_mid_(2,3) = tz;
 }
 
 bool LidarCalibration::detectGround(const pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, LaserLine& ground)
@@ -425,6 +460,9 @@ void LidarCalibration::printFinalResult(const Eigen::Matrix4f& T)
     std::cout << "============================================" << std::endl;
     std::cout << std::fixed << std::setprecision(4);
     
+    std::cout << "Vehicle Yaw Offset to Room: " << toDegrees(base_yaw_) << " deg" << std::endl;
+    std::cout << "--------------------------------------------" << std::endl;
+
     std::cout << "Translation (m):" << std::endl;
     std::cout << "  x: " << t.x() << std::endl;
     std::cout << "  y: " << t.y() << std::endl;
@@ -444,7 +482,6 @@ void LidarCalibration::printFinalResult(const Eigen::Matrix4f& T)
     std::cout << "============================================" << std::endl;
 }
 
-// [新增] 将标定结果保存为 YAML 格式
 void LidarCalibration::saveToYAML(const Eigen::Matrix4f& T, const std::string& filename)
 {
     std::ofstream out(filename);
@@ -454,7 +491,6 @@ void LidarCalibration::saveToYAML(const Eigen::Matrix4f& T, const std::string& f
     }
 
     Eigen::Vector3f t = T.block<3,1>(0,3);
-    // eulerAngles(2,1,0) 返回的是 [yaw, pitch, roll]
     Eigen::Vector3f e = T.block<3,3>(0,0).eulerAngles(2,1,0); 
     Eigen::Quaternionf q(T.block<3,3>(0,0));
 

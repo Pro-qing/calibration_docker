@@ -10,6 +10,7 @@ find_package(catkin REQUIRED COMPONENTS
   tf2_ros
   pcl_conversions
 )
+
 find_package(PCL 1.10 REQUIRED)
 message(STATUS "PCL_VERSION = ${PCL_VERSION}")
 

@@ -6,13 +6,14 @@
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
-#include <pcl/common/transforms.h> // 必须包含：用于点云变换
+#include <pcl/common/transforms.h>
 #include <Eigen/Dense>
 #include <nav_msgs/Odometry.h>
 #include <vector>
 #include <string>
 #include <deque>
-#include <fstream> 
+#include <fstream>
+#include <algorithm> // for std::max, std::min
 
 struct LaserLine {
     float avg_distance; 
@@ -33,12 +34,23 @@ public:
 private:
     ros::NodeHandle nh_;
     ros::Subscriber cloud_sub_, mid_cloud_sub_;
-    // 新增 transformed_mid_pub_
     ros::Publisher filtered_pub_, mid_filtered_pub_, wall_points_pub_, mid_wall_pub_, transformed_mid_pub_;
 
     std::string lidar_frame_, base_frame_, mid_frame_;
-    float actual_left_dist_, actual_right_dist_, actual_front_dist_;
+    
+    // --- 新增：卷尺实际测量参数 ---
+    float dist_left_wheel_to_front_;
+    float dist_right_wheel_to_front_;
+    float dist_left_wheel_to_left_wall_;
+    float dist_right_wheel_to_right_wall_;
+    float wheel_track_;
     float manual_lidar_height_;
+    
+    // --- 计算出的基座参考值 ---
+    float base_yaw_; // 车体相对墙面的偏航角
+    float base_to_front_wall_;
+    float base_to_left_wall_;
+    float base_to_right_wall_;
 
     Eigen::Matrix4f T_base_to_velo_;
     Eigen::Matrix4f T_base_to_mid_;
@@ -54,6 +66,7 @@ private:
     void pointCloudCallback(const sensor_msgs::PointCloud2::ConstPtr& msg);
     void midPointCloudCallback(const sensor_msgs::PointCloud2::ConstPtr& msg);
     
+    void calculateBaseRoomExtrinsics();
     void calculateVeloToBase();
     void calculateMidToBase();
     
@@ -65,11 +78,9 @@ private:
 
     void printFinalResult(const Eigen::Matrix4f& T);
     
-    // 新增：发布转换后的点云
     void publishTransformedMidCloud(const pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, 
                                    const Eigen::Matrix4f& T_mid_to_velo);
 
-    // [新增] 用于保存 YAML 文件的路径和函数
     std::string save_path_;
     void saveToYAML(const Eigen::Matrix4f& T, const std::string& lidar_calibration);
     

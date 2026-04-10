@@ -38,8 +38,8 @@ protected:
   ros::Subscriber sub_points_; 
   ros::Subscriber sub_scan_;   
 
+  // 统一输出为 PointCloud2，移除 pub_scan_
   ros::Publisher pub_points_; 
-  ros::Publisher pub_scan_;   
 
   laser_geometry::LaserProjection projector_; 
 

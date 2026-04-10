@@ -12,6 +12,7 @@ find_package(catkin REQUIRED COMPONENTS
   sensor_msgs
   # pcl_ros
   pcl_conversions
+  laser_geometry
 )
 
 find_package(Qt5Widgets REQUIRED)

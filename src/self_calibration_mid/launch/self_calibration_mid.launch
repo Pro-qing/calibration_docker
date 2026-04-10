@@ -15,11 +15,23 @@
         <param name="test_rotate_pitch" type="double" value="0.0" />
         <param name="test_rotate_roll" type="double" value="0.0" />
 
-        <!-- 车间墙面的实际距离（必须根据实际车间测量设置） -->
+        <!-- 车间墙面的实际距离（必须根据实际车间测量设置）
         <param name="actual_left_distance" type="double" value="0.73" />
         <param name="actual_right_distance" type="double" value="0.645" />
-        <param name="actual_front_distance" type="double" value="2.70" />
+        <param name="actual_front_distance" type="double" value="2.70" /> -->
                 
+        <!-- ================== 卷尺实际测量区 ================== -->
+        <!-- 1. 前向距离测量 -->
+        <param name="dist_left_wheel_to_front"  value="2.50" />
+        <param name="dist_right_wheel_to_front" value="2.55" />
+        
+        <!-- 2. 侧向距离测量 -->
+        <param name="dist_left_wheel_to_left_wall"   value="1.8" />
+        <param name="dist_right_wheel_to_right_wall" value="2.02" />
+        
+        <!-- 3. 车辆固有参数 -->
+        <param name="wheel_track" value="0.68" /> <!-- 左右车轮中心的距离 -->
+        
         <!-- 手动测量的雷达高度（必须根据实际车间测量设置）-->
         <param name="manual_lidar_height" type="double" value="1.92" />
         
